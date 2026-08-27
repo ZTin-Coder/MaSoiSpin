@@ -142,7 +142,7 @@
         }
 
         .player-input-group {
-            display: none; /* Ẩn cho đến khi spin xong */
+            display: none;
             flex-direction: column;
             gap: 15px;
             width: 80%;
@@ -155,6 +155,7 @@
             border: none;
             font-size: 1rem;
             text-align: center;
+            color: #000;
         }
 
         /* Màn hình kết quả */
@@ -174,17 +175,13 @@
 </head>
 <body>
 
-    <!-- Màn hình 1: Chọn số lượng role -->
     <div id="setup-screen" class="screen active">
         <h1>Cài Đặt Chơi Ma Sói</h1>
         <div class="total-players">Tổng số người chơi: <span id="total-count">0</span></div>
-        <div class="role-setup" id="role-container">
-            <!-- Render bằng JavaScript -->
-        </div>
+        <div class="role-setup" id="role-container"></div>
         <button class="btn-large" onclick="startGame()">Bắt Đầu Phân Vai</button>
     </div>
 
-    <!-- Màn hình 2: Spin & Nhập tên -->
     <div id="spin-screen" class="screen">
         <h2 id="progress-text">Người thứ 1 / X</h2>
         <div class="card" id="spin-card" onclick="startSpin()">
@@ -198,17 +195,13 @@
         </div>
     </div>
 
-    <!-- Màn hình 3: Quản trò xem kết quả -->
     <div id="result-screen" class="screen">
         <h1>Danh Sách Người Chơi</h1>
-        <div class="result-list" id="result-list">
-            <!-- Render bằng JavaScript -->
-        </div>
+        <div class="result-list" id="result-list"></div>
         <button class="btn-large" onclick="location.reload()">Chơi Lại Từ Đầu</button>
     </div>
 
     <script>
-        // Danh sách các vai cơ bản (Đã thêm Già Làng)
         const availableRoles = [
             { id: 'masoi', name: 'Ma Sói', count: 0 },
             { id: 'danlang', name: 'Dân Làng', count: 0 },
@@ -270,9 +263,16 @@
                 }
             });
 
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
+            // Bước 1: Sắp xếp ngẫu nhiên nhẹ bằng Math.random()
+            deck.sort(() => Math.random() - 0.5);
+
+            // Bước 2: Xào bài bằng Fisher-Yates 5 lần liên tiếp để đảo triệt để
+            for (let k = 0; k < 5; k++) {
+                for (let i = deck.length - 1; i > 0; i--) {
+                    // Tránh dùng hằng số, sử dụng ngẫu nhiên thay đổi liên tục
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
             }
 
             document.getElementById('setup-screen').classList.remove('active');
