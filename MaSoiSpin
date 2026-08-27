@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chia Vai Ma Sói</title>
+    <style>
+        /* CSS Reset cơ bản & Sử dụng Flexbox (Table-less) */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #1a1a2e;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #e94560;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .active {
+            display: flex;
+        }
+
+        /* Màn hình cài đặt */
+        .role-setup {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .role-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .role-item:last-child {
+            border-bottom: none;
+        }
+
+        .role-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #d83350;
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        .count {
+            font-size: 1.2rem;
+            width: 30px;
+            text-align: center;
+        }
+
+        .total-players {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #43cfb4;
+        }
+
+        /* Màn hình Spin */
+        #spin-screen {
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+        }
+
+        .card {
+            background: #0f3460;
+            width: 300px;
+            height: 400px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        .role-display {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            color: #e94560;
+        }
+
+        .instruction {
+            color: #8892b0;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .player-input-group {
+            display: none; /* Ẩn cho đến khi spin xong */
+            flex-direction: column;
+            gap: 15px;
+            width: 80%;
+            margin-top: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        /* Màn hình kết quả */
+        .result-list {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #0f3460;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Màn hình 1: Chọn số lượng role -->
+    <div id="setup-screen" class="screen active">
+        <h1>Cài Đặt Chơi Ma Sói</h1>
+        <div class="total-players">Tổng số người chơi: <span id="total-count">0</span></div>
+        <div class="role-setup" id="role-container">
+            <!-- Render bằng JavaScript -->
+        </div>
+        <button class="btn-large" onclick="startGame()">Bắt Đầu Phân Vai</button>
+    </div>
+
+    <!-- Màn hình 2: Spin & Nhập tên -->
+    <div id="spin-screen" class="screen">
+        <h2 id="progress-text">Người thứ 1 / X</h2>
+        <div class="card" id="spin-card" onclick="startSpin()">
+            <div class="instruction" id="spin-instruction">Nhấp vào đây để nhận vai</div>
+            <div class="role-display" id="role-display">?</div>
+            
+            <div class="player-input-group" id="player-input-group">
+                <input type="text" id="player-name" placeholder="Nhập tên của bạn...">
+                <button onclick="savePlayer(event)">Lưu & Chuyển Người Tiếp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Màn hình 3: Quản trò xem kết quả -->
+    <div id="result-screen" class="screen">
+        <h1>Danh Sách Người Chơi</h1>
+        <div class="result-list" id="result-list">
+            <!-- Render bằng JavaScript -->
+        </div>
+        <button class="btn-large" onclick="location.reload()">Chơi Lại Từ Đầu</button>
+    </div>
+
+    <script>
+        // Danh sách các vai cơ bản
+        const availableRoles = [
+            { id: 'masoi', name: 'Ma Sói', count: 0 },
+            { id: 'danlang', name: 'Dân Làng', count: 0 },
+            { id: 'tientri', name: 'Tiên Tri', count: 0 },
+            { id: 'baove', name: 'Bảo Vệ', count: 0 },
+            { id: 'thosan', name: 'Thợ Săn', count: 0 },
+            { id: 'phuthuy', name: 'Phù Thủy', count: 0 },
+            { id: 'cupid', name: 'Cupid', count: 0 }
+        ];
+
+        let deck = []; // Bộ bài sau khi xào
+        let players = []; // Lưu trữ { name: 'Tên', role: 'Vai' }
+        let currentPlayerIndex = 0;
+        let isSpinning = false;
+
+        // --- KHỞI TẠO GIAO DIỆN CÀI ĐẶT ---
+        function renderSetup() {
+            const container = document.getElementById('role-container');
+            container.innerHTML = '';
+            availableRoles.forEach((role, index) => {
+                const div = document.createElement('div');
+                div.className = 'role-item';
+                div.innerHTML = `
+                    <span>${role.name}</span>
+                    <div class="role-controls">
+                        <button onclick="updateCount(${index}, -1)">-</button>
+                        <span class="count">${role.count}</span>
+                        <button onclick="updateCount(${index}, 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            updateTotal();
+        }
+
+        function updateCount(index, change) {
+            if (availableRoles[index].count + change >= 0) {
+                availableRoles[index].count += change;
+                renderSetup();
+            }
+        }
+
+        function updateTotal() {
+            const total = availableRoles.reduce((sum, role) => sum + role.count, 0);
+            document.getElementById('total-count').innerText = total;
+        }
+
+        // --- BẮT ĐẦU TRÒ CHƠI ---
+        function startGame() {
+            const total = availableRoles.reduce((sum, role) => sum + role.count, 0);
+            if (total === 0) {
+                alert("Vui lòng chọn ít nhất 1 người chơi!");
+                return;
+            }
+
+            // Tạo bộ bài dựa trên số lượng đã chọn
+            deck = [];
+            availableRoles.forEach(role => {
+                for (let i = 0; i < role.count; i++) {
+                    deck.push(role.name);
+                }
+            });
+
+            // Thuật toán xào bài ngẫu nhiên (Fisher-Yates)
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            // Chuyển màn hình
+            document.getElementById('setup-screen').classList.remove('active');
+            document.getElementById('spin-screen').classList.add('active');
+            updateProgress();
+        }
+
+        // --- LOGIC SPIN VÀ NHẬN VAI ---
+        function updateProgress() {
+            document.getElementById('progress-text').innerText = `Người thứ ${currentPlayerIndex + 1} / ${deck.length}`;
+            document.getElementById('spin-instruction').style.display = 'block';
+            document.getElementById('role-display').innerText = '?';
+            document.getElementById('player-input-group').style.display = 'none';
+            document.getElementById('player-name').value = '';
+        }
+
+        function startSpin() {
+            // Ngăn việc nhấn nhiều lần khi đang spin hoặc khi đang đợi nhập tên
+            if (isSpinning || document.getElementById('player-input-group').style.display === 'flex') return;
+            
+            isSpinning = true;
+            document.getElementById('spin-instruction').style.display = 'none';
+            const display = document.getElementById('role-display');
+            
+            let spinTime = 0;
+            const maxSpinTime = 1500; // Quay trong 1.5 giây
+            
+            // Hiệu ứng đổi chữ liên tục
+            const spinInterval = setInterval(() => {
+                const randomRole = availableRoles[Math.floor(Math.random() * availableRoles.length)].name;
+                display.innerText = randomRole;
+                spinTime += 50;
+
+                if (spinTime >= maxSpinTime) {
+                    clearInterval(spinInterval);
+                    // Dừng lại ở vai thực sự của người chơi
+                    display.innerText = deck[currentPlayerIndex];
+                    isSpinning = false;
+                    
+                    // Hiển thị ô nhập tên
+                    document.getElementById('player-input-group').style.display = 'flex';
+                    document.getElementById('player-name').focus();
+                }
+            }, 50);
+        }
+
+        function savePlayer(event) {
+            event.stopPropagation(); // Ngăn card nhận sự kiện click
+            
+            const name = document.getElementById('player-name').value.trim();
+            if (name === '') {
+                alert("Vui lòng nhập tên của bạn!");
+                return;
+            }
+
+            // Lưu dữ liệu
+            players.push({
+                name: name,
+                role: deck[currentPlayerIndex]
+            });
+
+            currentPlayerIndex++;
+
+            // Kiểm tra xem đã hết người chưa
+            if (currentPlayerIndex >= deck.length) {
+                showResults();
+            } else {
+                updateProgress();
+            }
+        }
+
+        // --- HIỂN THỊ KẾT QUẢ CHO QUẢN TRÒ ---
+        function showResults() {
+            document.getElementById('spin-screen').classList.remove('active');
+            document.getElementById('result-screen').classList.add('active');
+
+            const resultList = document.getElementById('result-list');
+            resultList.innerHTML = '';
+            
+            players.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `
+                    <span><strong>${index + 1}. ${p.name}</strong></span>
+                    <span style="color: #e94560;">${p.role}</span>
+                `;
+                resultList.appendChild(div);
+            });
+        }
+
+        // Khởi chạy hàm đầu tiên
+        renderSetup();
+    </script>
+</body>
+</html>
